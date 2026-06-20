@@ -1,14 +1,26 @@
-# SessionWeave
+<p align="center">
+  <img src="assets/sessionweave-cover.jpg" width="100%" alt="SessionWeave — Local memory for AI coding sessions">
+</p>
 
-> Local. Private. Unified memory for your AI coding sessions.
+> *Inspired by precise geometric overlays on organic form — representing the weaving of fragmented AI conversations into coherent memory.*
+
+<h1 align="center">SessionWeave</h1>
+
+<p align="center">
+  <strong>Local. Private. Unified memory for your AI coding sessions.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/johanvillalba/sessionweave"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-%23000000.svg?logo=rust&logoColor=white" alt="Rust"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="Cross Platform">
+</p>
+
+---
 
 **SessionWeave** (`sw`) indexes conversations from **Claude Code**, **Cursor**, **Windsurf**, **Codex** and other AI coding tools. It lets you search with natural language and instantly "weave" coherent, copy-paste-ready context about how you built features.
 
 Everything runs **100% locally** using SQLite + LanceDB + Ollama. No data ever leaves your machine.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Rust](https://img.shields.io/badge/rust-%23000000.svg?&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Platform](https://img.shields.io/badge/platform-macOS%20|%20Linux%20|%20Windows-lightgrey)](#installation)
 
 ---
 
