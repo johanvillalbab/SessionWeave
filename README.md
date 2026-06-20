@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/sessionweave-cover.jpg" width="100%" alt="SessionWeave — Local memory for AI coding sessions">
+  <img src="assets/sessionweave-cover-v2.jpg" width="100%" alt="SessionWeave — Local memory for AI coding sessions">
 </p>
 
 > *Inspired by precise geometric overlays on organic form — representing the weaving of fragmented AI conversations into coherent memory.*
