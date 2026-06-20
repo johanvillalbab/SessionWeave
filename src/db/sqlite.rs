@@ -35,9 +35,9 @@ impl SqliteStore {
             .with_context(|| format!("Failed to open SQLite at {:?}", db_path))?;
 
         // Performance & integrity pragmas
-        conn.pragma_update(None, "journal_mode", &"WAL")?;
-        conn.pragma_update(None, "synchronous", &"NORMAL")?;
-        conn.pragma_update(None, "foreign_keys", &"ON")?;
+        conn.pragma_update(None, "journal_mode", "WAL")?;
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
+        conn.pragma_update(None, "foreign_keys", "ON")?;
 
         let store = Self { conn };
         store.init_schema()?;
@@ -222,27 +222,34 @@ impl SqliteStore {
              FROM sessions WHERE id = ?1"
         )?;
 
-        let session = stmt.query_row(params![id], |row| {
-            let files: String = row.get(10)?;
-            let files_touched: Vec<String> = serde_json::from_str(&files).unwrap_or_default();
-            let content_hash: Option<String> = row.get(11).ok();
+        let session = stmt
+            .query_row(params![id], |row| {
+                let files: String = row.get(10)?;
+                let files_touched: Vec<String> = serde_json::from_str(&files).unwrap_or_default();
+                let content_hash: Option<String> = row.get(11).ok();
 
-            Ok(Session {
-                id: row.get(0)?,
-                project_id: row.get(1)?,
-                source_path: Path::new(&row.get::<_, String>(2)?).to_path_buf(),
-                harness: row.get(3)?,
-                session_key: row.get(4)?,
-                title: row.get(5)?,
-                started_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?).unwrap().with_timezone(&Utc),
-                ended_at: row.get::<_, Option<String>>(7)?
-                    .map(|s| DateTime::parse_from_rfc3339(&s).unwrap().with_timezone(&Utc)),
-                summary: row.get(8)?,
-                message_count: row.get::<_, i64>(9)? as usize,
-                files_touched,
-                content_hash,
+                Ok(Session {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    source_path: Path::new(&row.get::<_, String>(2)?).to_path_buf(),
+                    harness: row.get(3)?,
+                    session_key: row.get(4)?,
+                    title: row.get(5)?,
+                    started_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    ended_at: row.get::<_, Option<String>>(7)?.map(|s| {
+                        DateTime::parse_from_rfc3339(&s)
+                            .unwrap()
+                            .with_timezone(&Utc)
+                    }),
+                    summary: row.get(8)?,
+                    message_count: row.get::<_, i64>(9)? as usize,
+                    files_touched,
+                    content_hash,
+                })
             })
-        }).optional()?;
+            .optional()?;
 
         Ok(session)
     }
@@ -299,7 +306,9 @@ impl SqliteStore {
                 session_id: row.get(1)?,
                 role,
                 content: row.get(3)?,
-                timestamp: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?).unwrap().with_timezone(&Utc),
+                timestamp: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?)
+                    .unwrap()
+                    .with_timezone(&Utc),
                 turn_index: row.get(5)?,
                 embedding_id: row.get(6)?,
                 files: serde_json::from_str(&files).unwrap_or_default(),
@@ -374,14 +383,19 @@ impl SqliteStore {
             // same deserialization as above
             let role_str: String = row.get(2)?;
             let role = match role_str.as_str() {
-                "user" => Role::User, "assistant" => Role::Assistant, "system" => Role::System, _ => Role::Tool,
+                "user" => Role::User,
+                "assistant" => Role::Assistant,
+                "system" => Role::System,
+                _ => Role::Tool,
             };
             Ok(Message {
                 id: row.get(0)?,
                 session_id: row.get(1)?,
                 role,
                 content: row.get(3)?,
-                timestamp: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?).unwrap().with_timezone(&Utc),
+                timestamp: DateTime::parse_from_rfc3339(&row.get::<_, String>(4)?)
+                    .unwrap()
+                    .with_timezone(&Utc),
                 turn_index: row.get(5)?,
                 embedding_id: row.get(6)?,
                 files: vec![],
@@ -403,11 +417,28 @@ impl SqliteStore {
 
     /// Rich stats for `sw stats` command.
     pub fn stats(&self) -> Result<DbStats> {
-        let sessions: i64 = self.conn.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))?;
-        let messages: i64 = self.conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?;
-        let decisions: i64 = self.conn.query_row("SELECT COUNT(*) FROM decisions", [], |r| r.get(0)).unwrap_or(0);
-        let tags: i64 = self.conn.query_row("SELECT COUNT(*) FROM tags", [], |r| r.get(0)).unwrap_or(0);
-        let tagged_sessions: i64 = self.conn.query_row("SELECT COUNT(DISTINCT session_id) FROM session_tags", [], |r| r.get(0)).unwrap_or(0);
+        let sessions: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))?;
+        let messages: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?;
+        let decisions: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM decisions", [], |r| r.get(0))
+            .unwrap_or(0);
+        let tags: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM tags", [], |r| r.get(0))
+            .unwrap_or(0);
+        let tagged_sessions: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(DISTINCT session_id) FROM session_tags",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
         let messages_with_decisions: i64 = self.conn.query_row(
             "SELECT COUNT(*) FROM messages WHERE decisions IS NOT NULL AND decisions != '[]' AND decisions != ''",
             [], |r| r.get(0)
@@ -437,7 +468,12 @@ impl SqliteStore {
 
     /// Insert a decision (from LLM extraction) into the dedicated decisions table.
     /// message_id optional (null for session-level decisions).
-    pub fn insert_decision(&self, session_id: &str, message_id: Option<&str>, text: &str) -> Result<()> {
+    pub fn insert_decision(
+        &self,
+        session_id: &str,
+        message_id: Option<&str>,
+        text: &str,
+    ) -> Result<()> {
         if text.trim().is_empty() {
             return Ok(());
         }
@@ -454,10 +490,11 @@ impl SqliteStore {
     /// Return all decision texts for a session (newest-ish via insert order).
     pub fn get_decisions_for_session(&self, session_id: &str) -> Result<Vec<String>> {
         let mut stmt = self.conn.prepare(
-            "SELECT text FROM decisions WHERE session_id = ?1 ORDER BY created_at DESC LIMIT 20"
+            "SELECT text FROM decisions WHERE session_id = ?1 ORDER BY created_at DESC LIMIT 20",
         )?;
         let rows = stmt.query_map(params![session_id], |row| row.get::<_, String>(0))?;
-        rows.collect::<std::result::Result<Vec<String>, _>>().map_err(Into::into)
+        rows.collect::<std::result::Result<Vec<String>, _>>()
+            .map_err(Into::into)
     }
 
     /// Ensure a tag exists (id derived from normalized name). Returns the tag id.
@@ -468,7 +505,13 @@ impl SqliteStore {
         }
         let id: String = norm
             .chars()
-            .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' {
+                    c
+                } else {
+                    '-'
+                }
+            })
             .collect::<String>()
             .trim_matches('-')
             .to_string();
@@ -504,7 +547,8 @@ impl SqliteStore {
                ORDER BY t.name"#,
         )?;
         let rows = stmt.query_map(params![session_id], |row| row.get::<_, String>(0))?;
-        rows.collect::<std::result::Result<Vec<String>, _>>().map_err(Into::into)
+        rows.collect::<std::result::Result<Vec<String>, _>>()
+            .map_err(Into::into)
     }
 
     /// Mark that this message has a corresponding vector in LanceDB.

@@ -74,7 +74,7 @@ pub async fn parse_claude_jsonl(path: &Path) -> Result<ParserResult> {
     let title = messages
         .first()
         .map(|m| m.content.chars().take(80).collect::<String>())
-        .map(|s| s.trim_end_matches(|c| c == '.' || c == ' ' || c == '\n').to_string());
+        .map(|s| s.trim_end_matches(['.', ' ', '\n']).to_string());
 
     Ok(ParserResult {
         session_id,

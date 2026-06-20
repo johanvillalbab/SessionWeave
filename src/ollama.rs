@@ -32,7 +32,12 @@ impl OllamaClient {
 
     pub async fn is_available(&self) -> bool {
         let url = format!("{}/api/tags", self.base_url);
-        self.client.get(&url).send().await.map(|r| r.status().is_success()).unwrap_or(false)
+        self.client
+            .get(&url)
+            .send()
+            .await
+            .map(|r| r.status().is_success())
+            .unwrap_or(false)
     }
 
     /// Get embedding vector (768 dims for nomic-embed-text)

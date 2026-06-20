@@ -17,7 +17,8 @@ pub async fn parse_generic(path: &Path) -> Result<ParserResult> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     let mut messages = vec![];
-    let session_id = path.file_stem()
+    let session_id = path
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("generic")
         .to_string();

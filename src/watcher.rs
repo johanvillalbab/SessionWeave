@@ -50,9 +50,14 @@ pub async fn start_watcher(config: Config, specific_path: Option<PathBuf>) -> Re
         while let Ok(event) = rx.try_recv() {
             match event {
                 Ok(evt) => {
-                    if matches!(evt.kind, EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)) {
+                    if matches!(
+                        evt.kind,
+                        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+                    ) {
                         for p in &evt.paths {
-                            if p.extension().map_or(false, |e| matches!(e.to_str(), Some("jsonl" | "json" | "md"))) {
+                            if p.extension().is_some_and(|e| {
+                                matches!(e.to_str(), Some("jsonl" | "json" | "md"))
+                            }) {
                                 println!("Change detected: {}", p.display());
                                 changed = true;
                             }

@@ -22,8 +22,12 @@ pub struct ExtractedInsights {
 pub fn extract_from_message(msg: &mut Message) {
     // Heuristics for common decision language in AI coding chats.
     let lower = msg.content.to_lowercase();
-    if (lower.contains("decided") || lower.contains("we will use") || lower.contains("switch to")
-        || lower.contains("going with") || lower.contains("chose ")) && msg.decisions.is_empty()
+    if (lower.contains("decided")
+        || lower.contains("we will use")
+        || lower.contains("switch to")
+        || lower.contains("going with")
+        || lower.contains("chose "))
+        && msg.decisions.is_empty()
     {
         msg.decisions.push(msg.preview(160));
     }

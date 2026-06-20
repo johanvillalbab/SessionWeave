@@ -8,7 +8,10 @@ use std::sync::Arc;
 
 use anyhow::Result;
 #[allow(unused_imports)]
-use arrow_array::{cast::AsArray, types::Float32Type, Array, FixedSizeListArray, RecordBatch, RecordBatchIterator, StringArray};
+use arrow_array::{
+    cast::AsArray, types::Float32Type, Array, FixedSizeListArray, RecordBatch, RecordBatchIterator,
+    StringArray,
+};
 #[allow(unused_imports)]
 use arrow_schema::{DataType, Field, Schema};
 use futures::TryStreamExt;
@@ -28,7 +31,9 @@ impl LanceStore {
     pub async fn new(base_path: &Path) -> Result<Self> {
         std::fs::create_dir_all(base_path)?;
         // lancedb uses the directory as the DB root
-        let db = lancedb::connect(base_path.to_str().unwrap()).execute().await?;
+        let db = lancedb::connect(base_path.to_str().unwrap())
+            .execute()
+            .await?;
         Ok(Self { db })
     }
 
@@ -55,7 +60,7 @@ impl LanceStore {
         if items.is_empty() {
             return Ok(());
         }
-        // Placeholder: table may not exist or schema heavy. 
+        // Placeholder: table may not exist or schema heavy.
         // For now we silently succeed so indexing doesn't break.
         // Real implementation would construct Arrow data and call tbl.add(...).
         let _ = self.db.open_table("message_embeddings").execute().await;
@@ -76,7 +81,11 @@ impl LanceStore {
 
     /// Vector nearest-neighbor search over message embeddings.
     /// Returns vec of (message_id, distance). Graceful empty on missing table / dim mismatch.
-    pub async fn search_vectors(&self, query_vec: &[f32], limit: usize) -> Result<Vec<(String, f32)>> {
+    pub async fn search_vectors(
+        &self,
+        query_vec: &[f32],
+        limit: usize,
+    ) -> Result<Vec<(String, f32)>> {
         if query_vec.len() != EMBED_DIM as usize {
             return Ok(vec![]);
         }

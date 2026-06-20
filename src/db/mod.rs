@@ -1,8 +1,8 @@
 //! Database layer.
 //! SQLite (primary metadata + FTS5) + LanceDB (vectors).
 
-pub mod sqlite;
 pub mod lancedb_store;
+pub mod sqlite;
 
-pub use sqlite::{DbStats, SqliteStore};
 pub use lancedb_store::LanceStore;
+pub use sqlite::{DbStats, SqliteStore};

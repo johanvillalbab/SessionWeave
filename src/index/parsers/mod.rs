@@ -8,7 +8,7 @@ pub use claude::{extract_file_paths, parse_claude_jsonl};
 pub use generic::parse_generic;
 
 use crate::models::Message;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct ParserResult {
@@ -21,6 +21,6 @@ pub struct ParserResult {
 }
 
 pub trait SessionParser: Send + Sync {
-    fn can_parse(&self, path: &PathBuf) -> bool;
-    fn parse(&self, path: &PathBuf) -> anyhow::Result<ParserResult>;
+    fn can_parse(&self, path: &Path) -> bool;
+    fn parse(&self, path: &Path) -> anyhow::Result<ParserResult>;
 }

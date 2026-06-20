@@ -49,7 +49,12 @@ pub async fn run_stdio_server(config: Config) -> Result<()> {
             Ok(r) => r,
             Err(e) => {
                 let err = json!({"code": -32700, "message": format!("Parse error: {}", e)});
-                let resp = JsonRpcResponse { jsonrpc: "2.0".into(), id: None, result: None, error: Some(err) };
+                let resp = JsonRpcResponse {
+                    jsonrpc: "2.0".into(),
+                    id: None,
+                    result: None,
+                    error: Some(err),
+                };
                 let json = serde_json::to_string(&resp)? + "\n";
                 let _ = stdout.write_all(json.as_bytes()).await;
                 let _ = stdout.flush().await;
@@ -152,20 +157,32 @@ async fn handle_tool_call(id: Option<Value>, params: Value, config: &Config) -> 
 
     let result = match tool_name {
         "sw_search" => {
-            let query = arguments.get("query").and_then(|v| v.as_str()).unwrap_or("");
-            let limit = arguments.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
+            let query = arguments
+                .get("query")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let limit = arguments
+                .get("limit")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(10) as usize;
 
             let engine = SearchEngine::new(config.clone()).await;
             match engine {
                 Ok(e) => {
-                    let hits = e.hybrid_search(query, limit, None).await.unwrap_or_default();
+                    let hits = e
+                        .hybrid_search(query, limit, None)
+                        .await
+                        .unwrap_or_default();
                     json!({ "content": [{ "type": "text", "text": serde_json::to_string_pretty(&hits).unwrap() }] })
                 }
                 Err(e) => json_error(&format!("Search failed: {}", e)),
             }
         }
         "sw_weave" => {
-            let query = arguments.get("query").and_then(|v| v.as_str()).unwrap_or("");
+            let query = arguments
+                .get("query")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let engine = SearchEngine::new(config.clone()).await;
             match engine {
                 Ok(e) => {

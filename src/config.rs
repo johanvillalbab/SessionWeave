@@ -98,8 +98,8 @@ impl Config {
     pub fn load_from(path: &Path) -> Result<Self> {
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read config at {:?}", path))?;
-        let mut cfg: Config = toml::from_str(&content)
-            .with_context(|| "Failed to parse TOML config")?;
+        let mut cfg: Config =
+            toml::from_str(&content).with_context(|| "Failed to parse TOML config")?;
         cfg.config_path = path.to_path_buf();
         cfg.ensure_defaults();
         Ok(cfg)
@@ -182,7 +182,9 @@ impl Config {
 
 pub fn default_config_path() -> PathBuf {
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    home.join(".config").join("sessionweave").join("config.toml")
+    home.join(".config")
+        .join("sessionweave")
+        .join("config.toml")
 }
 
 fn find_local_config() -> Result<PathBuf> {

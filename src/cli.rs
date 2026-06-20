@@ -155,36 +155,37 @@ impl Cli {
         };
 
         match self.command {
-            Commands::Index { path, force, dry_run } => {
-                handle_index(config, path, force, dry_run).await
-            }
-            Commands::Watch { path } => {
-                handle_watch(config, path).await
-            }
-            Commands::Search { query, limit, json, project } => {
-                handle_search(config, query, limit, json, project).await
-            }
-            Commands::Weave { query, full, context } => {
-                handle_weave(config, query, full, context).await
-            }
-            Commands::Resume { query, full, context } => {
-                handle_weave(config, query, full, context).await
-            }
-            Commands::Timeline { feature, limit } => {
-                handle_timeline(config, feature, limit).await
-            }
-            Commands::Export { output, format, project } => {
-                handle_export(config, output, format, project).await
-            }
-            Commands::Mcp {} => {
-                handle_mcp(config).await
-            }
-            Commands::Stats {} => {
-                handle_stats(config).await
-            }
-            Commands::Config { action } => {
-                handle_config(config, action)
-            }
+            Commands::Index {
+                path,
+                force,
+                dry_run,
+            } => handle_index(config, path, force, dry_run).await,
+            Commands::Watch { path } => handle_watch(config, path).await,
+            Commands::Search {
+                query,
+                limit,
+                json,
+                project,
+            } => handle_search(config, query, limit, json, project).await,
+            Commands::Weave {
+                query,
+                full,
+                context,
+            } => handle_weave(config, query, full, context).await,
+            Commands::Resume {
+                query,
+                full,
+                context,
+            } => handle_weave(config, query, full, context).await,
+            Commands::Timeline { feature, limit } => handle_timeline(config, feature, limit).await,
+            Commands::Export {
+                output,
+                format,
+                project,
+            } => handle_export(config, output, format, project).await,
+            Commands::Mcp {} => handle_mcp(config).await,
+            Commands::Stats {} => handle_stats(config).await,
+            Commands::Config { action } => handle_config(config, action),
         }
     }
 }
@@ -207,16 +208,32 @@ async fn handle_index(
     if let Some(p) = path {
         println!("Indexing path: {}", p.display());
         let stats = indexer.index_path(&p, force, dry_run).await?;
-        println!("  sessions: {}  messages: {}  files: {}  skipped: {}  embeddings: {}",
-            stats.sessions_indexed, stats.messages_indexed, stats.files_scanned, stats.skipped,
-            if stats.embeddings_added > 0 { format!("{}", stats.embeddings_added) } else { "n/a (or 0)".to_string() }
+        println!(
+            "  sessions: {}  messages: {}  files: {}  skipped: {}  embeddings: {}",
+            stats.sessions_indexed,
+            stats.messages_indexed,
+            stats.files_scanned,
+            stats.skipped,
+            if stats.embeddings_added > 0 {
+                format!("{}", stats.embeddings_added)
+            } else {
+                "n/a (or 0)".to_string()
+            }
         );
     } else {
         println!("Indexing all configured sources...");
         let stats = indexer.index_all(force, dry_run).await?;
-        println!("  sessions: {}  messages: {}  files: {}  skipped: {}  embeddings: {}",
-            stats.sessions_indexed, stats.messages_indexed, stats.files_scanned, stats.skipped,
-            if stats.embeddings_added > 0 { format!("{}", stats.embeddings_added) } else { "n/a (or 0)".to_string() }
+        println!(
+            "  sessions: {}  messages: {}  files: {}  skipped: {}  embeddings: {}",
+            stats.sessions_indexed,
+            stats.messages_indexed,
+            stats.files_scanned,
+            stats.skipped,
+            if stats.embeddings_added > 0 {
+                format!("{}", stats.embeddings_added)
+            } else {
+                "n/a (or 0)".to_string()
+            }
         );
     }
     if !dry_run {
@@ -241,7 +258,9 @@ async fn handle_search(
 ) -> Result<()> {
     let engine = SearchEngine::new(config).await?;
 
-    let results = engine.hybrid_search(&query, limit, project.as_deref()).await?;
+    let results = engine
+        .hybrid_search(&query, limit, project.as_deref())
+        .await?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&results)?);
@@ -254,12 +273,23 @@ async fn handle_search(
         "Found".green(),
         results.len(),
         query.cyan(),
-        if hybrid { "(hybrid: FTS + vector)".dimmed() } else { "(FTS only)".dimmed() }
+        if hybrid {
+            "(hybrid: FTS + vector)".dimmed()
+        } else {
+            "(FTS only)".dimmed()
+        }
     );
 
     for (i, r) in results.iter().enumerate() {
         println!("\n{}. {} {}", i + 1, r.harness.cyan(), r.timestamp);
-        println!("   {}", r.snippet.replace('\n', " ").chars().take(160).collect::<String>());
+        println!(
+            "   {}",
+            r.snippet
+                .replace('\n', " ")
+                .chars()
+                .take(160)
+                .collect::<String>()
+        );
         if let Some(f) = &r.files {
             println!("   files: {}", f.join(", ").dimmed());
         }
@@ -295,16 +325,15 @@ async fn handle_weave(
     }
 
     println!("\n{}", "════════════════════════════════════════".dimmed());
-    println!("{}", "Copy the block below into your next session:".dimmed());
+    println!(
+        "{}",
+        "Copy the block below into your next session:".dimmed()
+    );
     println!("\n{}\n", recap.paste_ready_block);
     Ok(())
 }
 
-async fn handle_timeline(
-    config: Config,
-    feature: Option<String>,
-    limit: usize,
-) -> Result<()> {
+async fn handle_timeline(config: Config, feature: Option<String>, limit: usize) -> Result<()> {
     let engine = SearchEngine::new(config).await?;
     let timeline = engine.timeline(feature.as_deref(), limit).await?;
     println!("{}", timeline);
@@ -319,7 +348,10 @@ async fn handle_export(
 ) -> Result<()> {
     println!("Exporting (format={})...", format);
     // TODO: real implementation
-    let content = format!("# SessionWeave Export\n\nProject: {:?}\n\n(Full export coming soon)\n", project);
+    let content = format!(
+        "# SessionWeave Export\n\nProject: {:?}\n\n(Full export coming soon)\n",
+        project
+    );
     if let Some(path) = output {
         std::fs::write(&path, content)?;
         println!("Exported to {}", path.display());
@@ -368,25 +400,50 @@ async fn handle_stats(config: Config) -> Result<()> {
     println!("  decisions (extracted):  {}", stats.decisions);
     println!("  tags:                   {}", stats.tags);
     println!("  sessions with tags:     {}", stats.tagged_sessions);
-    println!("  messages w/ decisions:  {}", stats.messages_with_decisions);
-    println!("  sessions w/ content_hash: {}", stats.sessions_with_content_hash);
+    println!(
+        "  messages w/ decisions:  {}",
+        stats.messages_with_decisions
+    );
+    println!(
+        "  sessions w/ content_hash: {}",
+        stats.sessions_with_content_hash
+    );
 
     // Vector info (from sqlite embedding refs + presence of vectors dir)
     println!("\n{}", "Vectors / Embeddings".bold());
-    println!("  messages with vector ref: {}", stats.messages_with_vectors);
+    println!(
+        "  messages with vector ref: {}",
+        stats.messages_with_vectors
+    );
     let vectors_dir = config.resolve_data_path("vectors");
     let has_vectors_dir = vectors_dir.exists();
-    println!("  vectors dir present:    {}", if has_vectors_dir { "yes" } else { "no" });
+    println!(
+        "  vectors dir present:    {}",
+        if has_vectors_dir { "yes" } else { "no" }
+    );
 
     // Heuristic for "vectors populated"
-    let vectors_populated = stats.messages_with_vectors > 0 || (has_vectors_dir && stats.messages > 0);
-    println!("  hybrid vectors ready:   {}", if vectors_populated { "yes (hybrid search enabled)" } else { "no (FTS-only; run index with Ollama for embeddings)" });
+    let vectors_populated =
+        stats.messages_with_vectors > 0 || (has_vectors_dir && stats.messages > 0);
+    println!(
+        "  hybrid vectors ready:   {}",
+        if vectors_populated {
+            "yes (hybrid search enabled)"
+        } else {
+            "no (FTS-only; run index with Ollama for embeddings)"
+        }
+    );
 
     println!("\n{}", "Deduplication".bold());
     let dedup_ratio = if stats.sessions > 0 {
         (stats.sessions_with_content_hash as f64 / stats.sessions as f64) * 100.0
-    } else { 0.0 };
-    println!("  hashed sessions:        {}/{} ({:.0}%)", stats.sessions_with_content_hash, stats.sessions, dedup_ratio);
+    } else {
+        0.0
+    };
+    println!(
+        "  hashed sessions:        {}/{} ({:.0}%)",
+        stats.sessions_with_content_hash, stats.sessions, dedup_ratio
+    );
 
     println!();
     Ok(())

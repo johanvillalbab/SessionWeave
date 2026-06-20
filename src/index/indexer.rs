@@ -7,8 +7,8 @@ use walkdir::WalkDir;
 
 use crate::config::{Config, Source};
 use crate::db::{LanceStore, SqliteStore};
-use crate::index::parsers::{parse_claude_jsonl, parse_generic, ParserResult};
 use crate::index::extractor::{extract_for_session, extract_from_message, extract_from_turn};
+use crate::index::parsers::{parse_claude_jsonl, parse_generic, ParserResult};
 use crate::models::{Role, Session};
 use crate::ollama::OllamaClient;
 use crate::utils::content_hash;
@@ -51,7 +51,9 @@ impl Indexer {
         }
 
         for source in &self.config.sources {
-            let stats = self.index_source(source, force, dry_run, &ollama, &lance).await?;
+            let stats = self
+                .index_source(source, force, dry_run, &ollama, &lance)
+                .await?;
             total.sessions_indexed += stats.sessions_indexed;
             total.messages_indexed += stats.messages_indexed;
             total.files_scanned += stats.files_scanned;
@@ -77,7 +79,8 @@ impl Indexer {
         if lance.is_some() {
             println!("   (LanceDB vector backend initialized; embeddings will be added if Ollama reachable)");
         }
-        self.index_source(&source, force, dry_run, &ollama, &lance).await
+        self.index_source(&source, force, dry_run, &ollama, &lance)
+            .await
     }
 
     fn build_ollama(config: &Config) -> Option<OllamaClient> {
@@ -107,7 +110,7 @@ fn infer_source_type(path: &Path) -> String {
         "windsurf".to_string()
     } else if p.contains("codex") {
         "codex".to_string()
-    } else if path.extension().map_or(false, |e| e == "jsonl") {
+    } else if path.extension().is_some_and(|e| e == "jsonl") {
         // Default .jsonl files coming from Claude Code style
         "claude".to_string()
     } else {
@@ -148,7 +151,11 @@ impl Indexer {
             if let Some(parsed) = self.try_parse(path, &source.source_type).await? {
                 let msg_count = parsed.messages.len();
                 if dry_run {
-                    println!("  [dry] would index {} turns from {}", msg_count, path.display());
+                    println!(
+                        "  [dry] would index {} turns from {}",
+                        msg_count,
+                        path.display()
+                    );
                     continue;
                 }
                 if self.persist_parsed(parsed, force, ollama, lance).await? {
@@ -165,7 +172,10 @@ impl Indexer {
             }
         }
 
-        println!("   Indexed {} sessions, {} messages", stats.sessions_indexed, stats.messages_indexed);
+        println!(
+            "   Indexed {} sessions, {} messages",
+            stats.sessions_indexed, stats.messages_indexed
+        );
         Ok(stats)
     }
 
@@ -174,7 +184,9 @@ impl Indexer {
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
         // Strong detection for Claude regardless of declared source_type (very common)
-        if ext == "jsonl" && (source_type == "claude" || path_str.contains("claude") || path_str.contains("chat")) {
+        if ext == "jsonl"
+            && (source_type == "claude" || path_str.contains("claude") || path_str.contains("chat"))
+        {
             let res = parse_claude_jsonl(path).await?;
             return Ok(Some(res));
         }
@@ -188,13 +200,17 @@ impl Indexer {
                     Ok(None)
                 }
             }
-            "cursor" if path.file_name().map_or(false, |n| n == "state.vscdb") => {
+            "cursor" if path.file_name().is_some_and(|n| n == "state.vscdb") => {
                 Ok(None) // TODO: implement Cursor SQLite parsing
             }
-            "generic" | "windsurf" | "codex" | _ => {
+            _ => {
                 if matches!(ext, "json" | "jsonl" | "md" | "txt") {
                     let res = parse_generic(path).await?;
-                    if res.messages.is_empty() { Ok(None) } else { Ok(Some(res)) }
+                    if res.messages.is_empty() {
+                        Ok(None)
+                    } else {
+                        Ok(Some(res))
+                    }
                 } else {
                     Ok(None)
                 }
@@ -229,11 +245,7 @@ impl Indexer {
 
         let session_id = result.session_id.clone();
 
-        let mut session = Session::new(
-            session_id.clone(),
-            &result.harness,
-            result.source.clone(),
-        );
+        let mut session = Session::new(session_id.clone(), &result.harness, result.source.clone());
         session.message_count = result.messages.len();
         session.title = result.title.clone();
         session.files_touched = result.files_touched.clone();
@@ -270,7 +282,12 @@ impl Indexer {
             .await;
 
             if let Some(s) = session_insights.summary {
-                if session.summary.is_none() || session.summary.as_ref().map_or(true, |cur| cur.len() < s.len()) {
+                if session.summary.is_none()
+                    || session
+                        .summary
+                        .as_ref()
+                        .is_none_or(|cur| cur.len() < s.len())
+                {
                     session.summary = Some(s);
                 }
             }
@@ -283,7 +300,13 @@ impl Indexer {
                     .rev()
                     .position(|m| m.role == Role::Assistant)
                     .map(|p| msgs.len() - 1 - p)
-                    .or_else(|| if !msgs.is_empty() { Some(msgs.len() - 1) } else { None });
+                    .or_else(|| {
+                        if !msgs.is_empty() {
+                            Some(msgs.len() - 1)
+                        } else {
+                            None
+                        }
+                    });
                 if let Some(idx) = target_idx {
                     let target = &mut msgs[idx];
                     for d in &session_insights.decisions {
@@ -301,9 +324,11 @@ impl Indexer {
 
             // Optional 2nd LLM call: extract on one important turn (only if substantial session)
             if msgs.len() >= 2 {
-                if let Some(imp_msg) = msgs.iter().rev().find(|m| {
-                    m.role == Role::Assistant && m.content.len() > 120
-                }) {
+                if let Some(imp_msg) = msgs
+                    .iter()
+                    .rev()
+                    .find(|m| m.role == Role::Assistant && m.content.len() > 120)
+                {
                     let turn_ins = extract_from_turn(o, &imp_msg.content).await;
                     let imp_id = imp_msg.id.clone();
                     // merge its output into that msg (need mutable ref - re-find)
@@ -362,13 +387,16 @@ impl Indexer {
                         }
                     }
                 }
-                if !emb_batch.is_empty() {
-                    if l.add_message_embeddings(emb_batch.clone()).await.is_ok() {
-                        for (mid, _, _, _, _) in &emb_batch {
-                            let _ = self.store.mark_message_embedding(mid);
-                        }
-                        println!("     + embeddings added for {} messages (Ollama + LanceDB)", msg_count_for_emb);
+                if !emb_batch.is_empty()
+                    && l.add_message_embeddings(emb_batch.clone()).await.is_ok()
+                {
+                    for (mid, _, _, _, _) in &emb_batch {
+                        let _ = self.store.mark_message_embedding(mid);
                     }
+                    println!(
+                        "     + embeddings added for {} messages (Ollama + LanceDB)",
+                        msg_count_for_emb
+                    );
                 }
             }
 
@@ -379,14 +407,25 @@ impl Indexer {
                     .clone()
                     .unwrap_or_else(|| format!("Session {}", &session_id));
                 if !sess.files_touched.is_empty() {
-                    summary_text = format!("{} | files: {}", summary_text, sess.files_touched.join(", "));
+                    summary_text = format!(
+                        "{} | files: {}",
+                        summary_text,
+                        sess.files_touched.join(", ")
+                    );
                 }
                 let _ = l.ensure_session_table().await;
                 if let Ok(semb) = o.embed(&summary_text).await {
-                    if semb.len() == crate::db::lancedb_store::EMBED_DIM as usize {
-                        if l.add_session_embedding(session_id.clone(), semb, summary_text, sess.harness.clone()).await.is_ok() {
-                            println!("     + session embedding added");
-                        }
+                    if semb.len() == crate::db::lancedb_store::EMBED_DIM as usize
+                        && l.add_session_embedding(
+                            session_id.clone(),
+                            semb,
+                            summary_text,
+                            sess.harness.clone(),
+                        )
+                        .await
+                        .is_ok()
+                    {
+                        println!("     + session embedding added");
                     }
                 }
             }

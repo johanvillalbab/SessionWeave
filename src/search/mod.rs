@@ -138,9 +138,16 @@ impl SearchEngine {
             };
 
             let session = self.store.get_session(&m.session_id)?;
-            let harness = session.as_ref().map(|s| s.harness.clone()).unwrap_or_default();
+            let harness = session
+                .as_ref()
+                .map(|s| s.harness.clone())
+                .unwrap_or_default();
 
-            let files = if m.files.is_empty() { None } else { Some(m.files.clone()) };
+            let files = if m.files.is_empty() {
+                None
+            } else {
+                Some(m.files.clone())
+            };
             let via_vector = vector_hit_ids.contains(&m.id);
             hits.push(SearchHit {
                 session_id: m.session_id.clone(),
@@ -181,7 +188,8 @@ impl SearchEngine {
 
         // Collect LLM-extracted decisions and tags (from decisions/session_tags tables populated at index time)
         let mut extracted_decisions: Vec<String> = vec![];
-        let mut extracted_tags: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut extracted_tags: std::collections::HashSet<String> =
+            std::collections::HashSet::new();
 
         for (i, h) in hits.iter().take(8).enumerate() {
             timeline_lines.push(format!(
@@ -209,7 +217,12 @@ impl SearchEngine {
                 }
             }
             if i < 3 {
-                excerpts.push_str(&format!("\n**Excerpt {}** ({}):\n> {}\n", i + 1, h.role, h.snippet));
+                excerpts.push_str(&format!(
+                    "\n**Excerpt {}** ({}):\n> {}\n",
+                    i + 1,
+                    h.role,
+                    h.snippet
+                ));
             }
         }
 
@@ -228,26 +241,46 @@ impl SearchEngine {
             "Found {} relevant fragments across {} sessions for \"{}\".\n\
              This is the synthesized picture from your local AI sessions.",
             hits.len(),
-            hits.iter().map(|h| &h.session_id).collect::<std::collections::HashSet<_>>().len(),
+            hits.iter()
+                .map(|h| &h.session_id)
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
             query
         );
 
         let files_md = if key_files.is_empty() {
             "*(no specific files extracted yet)*".to_string()
         } else {
-            key_files.iter().take(12).map(|f| format!("- `{}`", f)).collect::<Vec<_>>().join("\n")
+            key_files
+                .iter()
+                .take(12)
+                .map(|f| format!("- `{}`", f))
+                .collect::<Vec<_>>()
+                .join("\n")
         };
 
         let decs_md = if extracted_decisions.is_empty() {
             "*(no LLM-extracted decisions/tags — index with Ollama to populate)*".to_string()
         } else {
-            extracted_decisions.iter().take(6).map(|d| format!("- {}", d)).collect::<Vec<_>>().join("\n")
+            extracted_decisions
+                .iter()
+                .take(6)
+                .map(|d| format!("- {}", d))
+                .collect::<Vec<_>>()
+                .join("\n")
         };
 
         let tags_md = if extracted_tags.is_empty() {
             String::new()
         } else {
-            format!("\n**Feature tags:** {}", extracted_tags.iter().cloned().collect::<Vec<_>>().join(", "))
+            format!(
+                "\n**Feature tags:** {}",
+                extracted_tags
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
         };
 
         let key_points = format!(
@@ -271,8 +304,25 @@ Tags: {}
             summary,
             timeline_lines.join("\n"),
             key_points,
-            if extracted_decisions.is_empty() { "(none)".to_string() } else { extracted_decisions.iter().take(4).cloned().collect::<Vec<_>>().join(" ; ") },
-            if extracted_tags.is_empty() { "(none)".to_string() } else { extracted_tags.iter().cloned().collect::<Vec<_>>().join(", ") }
+            if extracted_decisions.is_empty() {
+                "(none)".to_string()
+            } else {
+                extracted_decisions
+                    .iter()
+                    .take(4)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(" ; ")
+            },
+            if extracted_tags.is_empty() {
+                "(none)".to_string()
+            } else {
+                extracted_tags
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            }
         );
 
         Ok(WeaveRecap {
