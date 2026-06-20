@@ -6,7 +6,7 @@
 
 set -e
 
-REPO="sessionweave/sessionweave"
+REPO="johanvillalba/sessionweave"
 BINARY_NAME="sw"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 

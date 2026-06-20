@@ -1,135 +1,132 @@
-# SessionWeave (`sw`)
+# SessionWeave
 
-**Local. Private. Unified memory for all your AI coding conversations.**
+> Local. Private. Unified memory for your AI coding sessions.
 
-SessionWeave indexes sessions from **Claude Code**, **Cursor**, **Windsurf**, **Codex** and any Markdown/JSON exports. It lets you search and "weave" coherent recaps of how you built features — perfect for power users (like shadcn) who live across multiple AI harnesses.
+**SessionWeave** (`sw`) indexes conversations from **Claude Code**, **Cursor**, **Windsurf**, **Codex** and other AI coding tools. It lets you search with natural language and instantly "weave" coherent, copy-paste-ready context about how you built features.
 
-Everything runs 100% locally with SQLite + LanceDB + Ollama.
+Everything runs **100% locally** using SQLite + LanceDB + Ollama. No data ever leaves your machine.
 
----
-
-## Features (MVP complete)
-
-- Automatic + manual indexing (`sw index`, `sw watch`)
-- Full-text + hybrid vector search (`sw search`)
-- `sw weave` / `sw resume` — rich recap with timeline, files, extracted decisions + tags + paste block
-- `sw stats` — sessions, messages, tags, decisions, vectors status, dedup %
-- Timeline, Export, MCP server
-- Proper content_hash deduplication on sessions & messages
-- Claude-first parser + generic; LLM extraction (optional)
-
-## MVP Status (complete as of 2026-06-20)
-
-**What is shipped & polished:**
-- Full CLI surface: `index`, `watch`, `search`, `resume`/`weave`, `timeline`, `export`, `mcp`, `stats`, `config`
-- Strong Claude Code JSONL parser (tools, file paths, turns) + generic MD/JSON
-- SQLite + FTS5 tolerant search
-- LanceDB vector store (initialized; embeddings when Ollama available)
-- Proper `content_hash` on sessions + messages for true deduplication (skips identical content even on re-runs)
-- LLM extraction (when Ollama): decisions + auto tags during `index`
-- `sw stats` shows sessions/messages/tags/decisions + vector status + dedup coverage
-- Enhanced output: index reports embeddings added; search labels hybrid vs FTS-only
-- `resume`/`weave` includes extracted decisions and tags (when populated)
-- MCP server for agent use
-- Idempotent + graceful no-Ollama mode
-
-**To enable full power (hybrid vectors + auto decisions/tags):**
-```bash
-ollama pull nomic-embed-text
-ollama pull qwen2.5-coder:7b   # or llama3, etc
-sw index ~/.claude/projects --force
-sw search "auth"     # now shows "(hybrid: FTS + vector)"
-sw resume "jwt login"
-sw stats
-```
-
-Without Ollama you still get excellent FTS search + basic indexing.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/rust-%23000000.svg?&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Platform](https://img.shields.io/badge/platform-macOS%20|%20Linux%20|%20Windows-lightgrey)](#installation)
 
 ---
 
-## Installation
+## Why SessionWeave?
 
-### Quick (recommended)
+Modern developers (especially power users) switch between multiple AI coding environments:
+
+- Claude Code
+- Cursor
+- Windsurf (Codeium Cascade)
+- Codex / Continue / Aider / etc.
+
+Each tool has its own fragmented history. Finding "where we discussed the auth changes" or "how did we decide on the database schema?" becomes painful.
+
+**SessionWeave** solves this by giving you a single, private, searchable memory layer across all your AI coding sessions.
+
+## Features
+
+- **Intelligent Indexing** — Automatically parses Claude Code JSONL, Cursor workspaces, Markdown exports, and generic JSON.
+- **Hybrid Search** — Combines full-text search (FTS5) with semantic vector search (LanceDB + nomic-embed-text).
+- **Weave & Resume** — The killer feature. Generate rich, chronological recaps of any topic or feature (`sw resume "jwt auth flow"`).
+- **LLM-Powered Insights** — Extracts key decisions and feature tags using a local LLM during indexing.
+- **MCP Server** — Expose SessionWeave as a Model Context Protocol server so your agents (Cursor, Claude, etc.) can query your past sessions directly.
+- **Privacy First** — Runs completely offline. Your data never leaves your computer.
+- **Single Binary** — Written in Rust. One fast, portable executable.
+
+## Quick Start
+
+### 1. Install
+
+**From source (recommended today):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sessionweave/sessionweave/main/install.sh | bash
-```
-
-Or build from source:
-
-```bash
-git clone https://github.com/sessionweave/sessionweave
+git clone https://github.com/johanvillalba/sessionweave.git
 cd sessionweave
 cargo build --release
-# binary is at target/release/sw
-```
-
-Add to PATH or symlink:
-```bash
 sudo ln -s $(pwd)/target/release/sw /usr/local/bin/sw
 ```
 
-### Ollama (recommended for full power)
+**With Ollama (for full semantic power):**
 
 ```bash
-# Install Ollama
 ollama pull nomic-embed-text
-ollama pull qwen2.5-coder:7b   # or llama3.2, codellama, etc.
+ollama pull qwen2.5-coder:7b   # or any good local model
 ```
 
----
-
-## Usage (current working commands)
+### 2. Index your sessions
 
 ```bash
-# First run creates ~/.config/sessionweave/config.toml
-sw config show
-
-# Index a Claude Code export / log file or directory
+# Claude Code
 sw index ~/.claude/projects
-sw index tests/fixtures/sample_claude.jsonl   # example in this repo
 
-# Index Cursor (basic support; full vscdb parser in progress)
-sw index ~/Library/Application\ Support/Cursor/User
+# Cursor
+sw index ~/Library/Application\ Support/Cursor/User/workspaceStorage
 
-# Watch mode (auto reindex on changes)
+# Or watch for changes
 sw watch
-
-# Search (FTS + tolerant matching)
-sw search "auth system"
-sw search "where did we talk about payments"   # shows (hybrid...) when vectors on
-
-# Generate rich context recap (the killer feature)
-sw resume "building the auth system"
-sw weave "how we implemented feature flags"
-
-# Stats + dedup insight
-sw stats
-
-# Timeline
-sw timeline auth
-
-# Export
-sw export --format md > my-memory.md
-
-# MCP server (Cursor / Claude Code / Windsurf can call SessionWeave)
-sw mcp
 ```
 
-Example output of `sw resume "auth"` contains a ready-to-paste context block with timeline and key excerpts.
+### 3. Use it
 
----
+```bash
+sw search "authentication"                    # hybrid search
+sw resume "how we implemented JWT auth"       # the magic command
+sw stats                                      # see what you have indexed
+sw mcp                                        # start MCP server for agents
+```
+
+## Usage Examples
+
+### Resume a feature discussion
+
+```bash
+sw resume "building the auth system"
+```
+
+**Output includes:**
+- Timeline of relevant turns
+- Key files touched
+- Extracted decisions ("We decided to use RS256...")
+- Ready-to-paste context block for your next AI session
+
+### Search with natural language
+
+```bash
+sw search "where did we talk about rate limiting for payments"
+```
+
+When using Ollama embeddings you’ll see hybrid results with a `[vector hit]` indicator.
+
+## Commands
+
+| Command          | Description                                      |
+|------------------|--------------------------------------------------|
+| `sw index [path]`| Index a directory or file                        |
+| `sw watch`       | Continuously watch and index new sessions        |
+| `sw search <q>`  | Hybrid search across all indexed content         |
+| `sw resume <q>`  | Generate rich recap + copy-paste context         |
+| `sw weave <q>`   | Alias for resume                                 |
+| `sw timeline [feature]` | Chronological view of a feature           |
+| `sw stats`       | Show database statistics and health              |
+| `sw export`      | Export unified memory to Markdown/JSON           |
+| `sw mcp`         | Start MCP stdio server                           |
+| `sw config`      | View or edit configuration                       |
 
 ## Configuration
 
-Default location: `~/.config/sessionweave/config.toml`
+SessionWeave looks for configuration in this order:
 
-Example:
+1. `--config /path/to/config.toml`
+2. `.sessionweave/config.toml` (project-local)
+3. `~/.config/sessionweave/config.toml` (global)
+
+Example `config.toml`:
 
 ```toml
 [general]
 data_dir = "~/.sessionweave"
-default_limit = 20
 
 [ollama]
 url = "http://localhost:11434"
@@ -146,63 +143,65 @@ path = "~/Library/Application Support/Cursor/User"
 type = "cursor"
 ```
 
-You can also put `.sessionweave/config.toml` inside any project.
+## How It Works
 
----
+1. **Discovery & Parsing** — Walks configured paths and intelligently parses each harness format.
+2. **Extraction** — Rule-based + optional LLM extraction of decisions and tags.
+3. **Storage** — Normalized data in SQLite (with FTS5) + vectors in LanceDB.
+4. **Search & Synthesis** — Hybrid retrieval + optional synthesis for high-quality recaps.
+5. **MCP Exposure** — Agents can call tools like `search` and `weave` directly.
 
-## How Parsing Works
+## Supported Tools (Current)
 
-1. **Rules first** — file paths, tool calls, diffs are extracted deterministically.
-2. **LLM (Ollama)** — when enabled, extracts decisions, summaries, and auto-tags.
-3. Idempotent via content hash + source path.
+| Tool          | Format Support      | Notes                          |
+|---------------|---------------------|--------------------------------|
+| Claude Code   | Excellent (`*.jsonl`) | Full tool calls, files, turns |
+| Cursor        | Basic               | workspaceStorage support       |
+| Generic       | Markdown + JSON     | Any exported chat              |
+| Windsurf / Codex | Partial          | Via generic parser             |
 
-Supported today:
-- Claude Code: `*.jsonl` under `~/.claude/projects`
-- Generic: Markdown chats, JSON/JSONL message arrays
-- Cursor: Planned full support (state.vscdb)
+## Privacy & Philosophy
 
----
-
-## Architecture
-
-See [PLAN.md](./PLAN.md) for detailed architecture, data model and roadmap.
-
-Core stack:
-- Rust (single binary `sw`)
-- SQLite + FTS5
-- LanceDB (vectors)
-- Ollama (embeddings + intelligence)
-- MCP stdio server
-
----
-
-## Development
-
-```bash
-cargo build
-cargo test
-cargo run -- index tests/fixtures/sample_claude.jsonl
-cargo run -- resume "auth"
-```
-
----
+- **Zero telemetry**
+- **No cloud sync**
+- **Your data, your machine**
+- Designed for developers who treat conversation history as first-class engineering artifacts
 
 ## Roadmap
 
-- [x] Core CLI + config
-- [x] Claude + generic parsers
-- [x] SQLite + FTS5
-- [ ] Full LanceDB hybrid search
-- [ ] Automatic LLM extraction during index
-- [ ] Watcher polish + debouncing
-- [ ] Full MCP tool surface + resources
-- [ ] Tauri optional dashboard
-- [ ] Shell completions + better pretty printing
+- Full deep Cursor history support
+- Better multi-project and multi-harness clustering
+- Optional Tauri GUI (future)
+- Prebuilt binaries + package managers (Homebrew, apt, etc.)
+- Shell completions
 
----
+See [PLAN.md](PLAN.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more details.
+
+## Contributing
+
+Contributions are very welcome!
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feat/amazing-thing`)
+3. Make your changes + tests
+4. Open a Pull Request
+
+Please keep changes focused and add tests when possible.
 
 ## License
 
-MIT © SessionWeave Contributors
+MIT License — see [LICENSE](LICENSE) for details.
 
-Built for developers who treat their AI conversations as first-class engineering artifacts.
+## Acknowledgments
+
+Built for developers who live at the intersection of human and AI coding.
+
+Special thanks to the Rust, SQLite, LanceDB, and Ollama communities.
+
+---
+
+**SessionWeave** — Never lose context again.
+
+```bash
+sw resume "that one decision we made about..."
+```
