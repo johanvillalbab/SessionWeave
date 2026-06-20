@@ -1,0 +1,24 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# SessionWeave data
+.sessionweave/
+**/.sessionweave/
+~/.sessionweave/
+
+# macOS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Logs / temp
+*.log
+/tmp/
+*.tmp
+
+# Optional Tauri build artifacts
+/dist/
+/src-tauri/target

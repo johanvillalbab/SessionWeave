@@ -1,0 +1,23 @@
+[general]
+data_dir = "~/.sessionweave"
+default_limit = 15
+
+[ollama]
+url = "http://localhost:11434"
+embedding_model = "nomic-embed-text"
+chat_model = "qwen2.5-coder:7b"
+enabled = true
+
+[[sources]]
+path = "~/.claude/projects"
+type = "claude"
+recursive = true
+
+[[sources]]
+path = "~/Library/Application Support/Cursor/User"
+type = "cursor"
+recursive = true
+
+[[sources]]
+path = "~/.codex"
+type = "codex"
